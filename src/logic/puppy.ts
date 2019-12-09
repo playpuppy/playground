@@ -1,4 +1,5 @@
 import { PuppyVM as Puppy } from '@playpuppy/puppy2d';
+import { ActionEvent, OutputEvent } from '@playpuppy/puppy2d/dist/events';
 
 export type StringElement = {
   color?: string;
@@ -18,7 +19,6 @@ export const resize = (puppy: Puppy | null) => (w: number, h: number) => {
 
 export const play = (puppy: Puppy | null) => (source: string) => () => {
   if (puppy && puppy.load(source)) {
-    puppy.start();
     return true;
   } else {
     return false;
@@ -48,15 +48,31 @@ export const fullscreen = (puppy: Puppy | null) => () => {
 
 export const initConsole = (
   setConsoleValue: (action: React.SetStateAction<ConsoleValue>) => void,
+  settingAction: { AUTO_PLAY: React.Dispatch<React.SetStateAction<boolean>> },
   puppy: Puppy | null
 ) => {
   if (puppy) {
     const appendLine = (stringElements: StringElement[]) =>
       setConsoleValue(prev => prev.concat([stringElements]));
-    puppy.addEventListener('stdout', (e: { text: string }) => {
+    puppy.addEventListener('stdout', (e: OutputEvent) => {
       const stringElements: StringElement[] = [];
       stringElements.push({
         value: e.text,
+      });
+      appendLine(stringElements);
+    });
+    puppy.addEventListener('stderr', (e: OutputEvent) => {
+      const stringElements: StringElement[] = [];
+      stringElements.push({
+        value: e.text,
+        color: 'red',
+      });
+      appendLine(stringElements);
+    });
+    puppy.addEventListener('action', (e: ActionEvent) => {
+      const stringElements: StringElement[] = [];
+      stringElements.push({
+        value: `> Puppy ${e.type} ${e.action}`,
       });
       appendLine(stringElements);
     });
@@ -70,6 +86,9 @@ export const initConsole = (
         env: { [key: string]: any };
       }) => {
         const stringElements: StringElement[] = [];
+        if (e.key in settingAction) {
+          settingAction[e.key](e.value === 'true');
+        }
         stringElements.push({
           value: `> The env value of key "${e.key}" was changed to "${e.value}" from "${e.oldValue}". \n`,
         });
