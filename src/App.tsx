@@ -58,8 +58,12 @@ const App: React.FC<AppProps> = (props: AppProps) => {
   const [isConsoleVisible, setIsConsoleVisible] = useState(false);
   const [consoleValue, setConsoleValue] = useState([] as ConsoleValue);
   const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [isDebug, setIsDebug] = useState(false);
   const [autoPlayer, _setAutoPlayer] = useState(new AutoPlayer());
   const [_highlight, setHighLight] = useState([] as string[]);
+  const [codeChangeTimer, setCodeChangeTimer] = useState(
+    null as NodeJS.Timer | null
+  );
 
   const autoPlayFunc = () => {
     const page =
@@ -76,6 +80,14 @@ const App: React.FC<AppProps> = (props: AppProps) => {
       );
     }
     setConsoleValue([]);
+    if (codeEditor) {
+      codeEditor.setSelection({
+        startColumn: 0,
+        endColumn: 0,
+        startLineNumber: 0,
+        endLineNumber: 0,
+      });
+    }
     if (puppyplay(puppy)(source)()) {
       setEditorTheme('vs');
     } else {
@@ -112,9 +124,14 @@ const App: React.FC<AppProps> = (props: AppProps) => {
     }
   }, [puppy, codeEditor, setHighLight]);
   useEffect(() => {
-    initConsole(setConsoleValue, { AUTO_PLAY: setIsAutoPlay }, puppy);
+    initConsole(
+      setConsoleValue,
+      { AUTO_PLAY: setIsAutoPlay, DEBUG: setIsDebug },
+      puppy
+    );
     if (puppy) {
       setIsAutoPlay(puppy.os.getenv('AUTO_PLAY', false) === 'true');
+      setIsDebug(puppy.os.getenv('DEBUG', false) === 'true');
     }
   }, [puppy]);
   useEffect(() => {
@@ -122,6 +139,23 @@ const App: React.FC<AppProps> = (props: AppProps) => {
       setCourse(courses[coursePath]);
     }
   }, [coursePath, courses]);
+  useEffect(() => {
+    if (puppy) {
+      // const appendLine = (stringElements: StringElement[]) =>
+      //   setConsoleValue(prev => prev.concat([stringElements]));
+      // if (isDebug) {
+      //   puppy.addEventListener('action', (e: ActionEvent) => {
+      //     const stringElements: StringElement[] = [];
+      //     stringElements.push({
+      //       value: `> Puppy ${e.type} ${e.action}`,
+      //     });
+      //     appendLine(stringElements);
+      //   });
+      // } else {
+      //   puppy.resetEventListener('action');
+      // }
+    }
+  }, [isDebug, puppy]);
 
   return (
     <div className="App">
@@ -171,7 +205,15 @@ const App: React.FC<AppProps> = (props: AppProps) => {
               fontSize={editorFontSize}
               theme={editorTheme}
               source={source}
-              onChange={onChange(codeEditor, setSource, decos, setDecos, puppy)}
+              onChange={onChange(
+                codeEditor,
+                setSource,
+                decos,
+                setDecos,
+                puppy,
+                codeChangeTimer,
+                setCodeChangeTimer
+              )}
               editorDidMount={editorDidMount(setCodeEditor)}
               fontPlus={fontPlus(editorFontSize, setEditorFontSize)}
               fontMinus={fontMinus(editorFontSize, setEditorFontSize)}
