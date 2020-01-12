@@ -7,6 +7,7 @@ import Setting from './components/Setting/Setting';
 import PuppyScreen from './components/PuppyScreen/PuppyScreen';
 import Editor from './components/Editor/Editor';
 import Course from './components/Course/Course';
+import Login from './components/Login/Login';
 import { QueryParams } from './index';
 import {
   Courses,
@@ -15,7 +16,7 @@ import {
   fetchSampleFromGitHub,
   fetchCoursesFromGitHub,
 } from './logic/course';
-import { PuppyOS, PuppyVM } from '@playpuppy/puppy2d';
+import { PuppyVM } from '@playpuppy/puppy2d';
 import { LineEvent, ActionEvent } from '@playpuppy/puppy2d/dist/events';
 import {
   play as puppyplay,
@@ -36,6 +37,7 @@ import {
 } from './logic/editor';
 import { submitCommand } from './logic/setting';
 import { AutoPlayer } from './logic/autoplay';
+import { signInByGoogle } from './logic/firebase/auth';
 
 type AppProps = { qs: QueryParams; hash: string };
 
@@ -64,6 +66,7 @@ const App: React.FC<AppProps> = (props: AppProps) => {
   const [codeChangeTimer, setCodeChangeTimer] = useState(
     null as NodeJS.Timer | null
   );
+  const [isShowLogin, setIsShowLogin] = useState(false);
 
   const autoPlayFunc = () => {
     const page =
@@ -99,8 +102,7 @@ const App: React.FC<AppProps> = (props: AppProps) => {
     fetchCoursesFromGitHub(setCourses);
     const puppyElement = document.getElementById('puppy-screen');
     if (puppyElement) {
-      const puppyOS = new PuppyOS();
-      const puppy = puppyOS.newPuppyVM(puppyElement);
+      const puppy = new PuppyVM(puppyElement);
       setPuppy(puppy);
     }
   }, []);
@@ -164,6 +166,7 @@ const App: React.FC<AppProps> = (props: AppProps) => {
           courses={courses}
           setIsShowVersion={setIsShowVersion}
           setIsShowSetting={() => setIsShowSetting(true)}
+          setIsShowLogin={() => setIsShowLogin(true)}
         />
         <Version show={isShowVersion} setShow={setIsShowVersion} />
         <Setting
@@ -172,6 +175,11 @@ const App: React.FC<AppProps> = (props: AppProps) => {
           value={settingCommand}
           setValue={setSettingCommand}
           submitValue={submitCommand(puppy)}
+        />
+        <Login
+          show={isShowLogin}
+          setShow={setIsShowLogin}
+          signInByGoogle={() => signInByGoogle(puppy, setIsShowLogin)}
         />
         <Row id="main-row">
           <Col id="left-col" xs={6}>
@@ -212,7 +220,8 @@ const App: React.FC<AppProps> = (props: AppProps) => {
                 setDecos,
                 puppy,
                 codeChangeTimer,
-                setCodeChangeTimer
+                setCodeChangeTimer,
+                setEditorTheme
               )}
               editorDidMount={editorDidMount(setCodeEditor)}
               fontPlus={fontPlus(editorFontSize, setEditorFontSize)}

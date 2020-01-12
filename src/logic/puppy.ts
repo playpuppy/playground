@@ -1,5 +1,6 @@
 import { PuppyVM as Puppy } from '@playpuppy/puppy2d';
 import { OutputEvent } from '@playpuppy/puppy2d/dist/events';
+import { add_log } from './firebase/firestore';
 
 export type StringElement = {
   color?: string;
@@ -18,9 +19,11 @@ export const resize = (puppy: Puppy | null) => (w: number, h: number) => {
 };
 
 export const play = (puppy: Puppy | null) => (source: string) => () => {
-  if (puppy && puppy.load(source)) {
-    return true;
-  } else {
+  try {
+    console.log(source);
+    return puppy && puppy.load(source);
+  } catch (e) {
+    console.log(`Puppy Error`);
     return false;
   }
 };
@@ -88,6 +91,17 @@ export const initConsole = (
         oldValue: string;
         env: { [key: string]: any };
       }) => {
+        add_log(
+          {
+            type: 'changed-env',
+            value: {
+              key: e.key,
+              old_value: e.oldValue,
+              new_value: e.value,
+            },
+          },
+          new Date()
+        );
         const stringElements: StringElement[] = [];
         if (e.key in settingAction) {
           settingAction[e.key](e.value === 'true');

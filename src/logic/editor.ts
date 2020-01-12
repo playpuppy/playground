@@ -9,6 +9,7 @@ import {
 import { callKoinu } from './koinu';
 import { ErrorLog, PuppyVM } from '@playpuppy/puppy2d';
 import { messagefy } from '@playpuppy/puppy2d/dist/lang/code';
+import { add_log } from './firebase/firestore';
 
 export type CodeEditor = editor.IStandaloneCodeEditor;
 export type ContentChangedEvent = editor.IModelContentChangedEvent;
@@ -213,7 +214,8 @@ export const onChange = (
   setDecos: (decos: string[]) => void,
   puppy: PuppyVM | null,
   codeChangeTimer: NodeJS.Timer | null,
-  setCodeChangeTimer: React.Dispatch<React.SetStateAction<NodeJS.Timer | null>>
+  setCodeChangeTimer: React.Dispatch<React.SetStateAction<NodeJS.Timer | null>>,
+  setEditorTheme: React.Dispatch<React.SetStateAction<string>>
 ) => (source: string, _event: editor.IModelContentChangedEvent) => {
   if (codeEditor) {
     checkZenkaku(codeEditor, decos, setDecos);
@@ -225,8 +227,20 @@ export const onChange = (
   if (puppy) {
     setCodeChangeTimer(
       setTimeout(() => {
-        puppy.load(source, false);
-      }, 500)
+        try {
+          if (puppy.load(source, false)) {
+            setEditorTheme('vs');
+            return true;
+          } else {
+            setEditorTheme('error');
+            return false;
+          }
+        } catch (e) {
+          console.log(e);
+          setEditorTheme('error');
+          return false;
+        }
+      }, 1000)
     );
   }
 };
@@ -283,6 +297,22 @@ export const ErrorLogs2Markers = (logs: ErrorLog[]): editor.IMarkerData[] =>
 export const setErrorLogs = (codeEditor: CodeEditor | null) => (
   type: LogType
 ) => (logs: ErrorLog[]) => {
+  if (logs.length > 0) {
+    logs.map(log => {
+      Object.keys(log).forEach(key => {
+        if (log[key] === undefined) {
+          log[key] = null;
+        }
+      });
+    });
+    add_log(
+      {
+        type: 'compile-error',
+        value: logs,
+      },
+      new Date()
+    );
+  }
   if (codeEditor) {
     setModelMarkers(codeEditor.getModel()!, type, ErrorLogs2Markers(logs));
   }

@@ -8,7 +8,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.21",
     "@fortawesome/free-solid-svg-icons": "^5.10.1",
     "@fortawesome/react-fontawesome": "^0.1.4",
-    "@playpuppy/puppy2d": "^1.0.7",
+    "@playpuppy/puppy2d": "^1.0.8",
     "@svgr/webpack": "4.1.0",
     "@types/ace": "0.0.42",
     "@types/jest": "24.0.16",
@@ -41,6 +41,7 @@
     "eslint-plugin-react": "7.12.4",
     "eslint-plugin-react-hooks": "^1.5.0",
     "file-loader": "3.0.1",
+    "firebase": "^7.6.1",
     "html-webpack-plugin": "4.0.0-beta.5",
     "identity-obj-proxy": "3.0.0",
     "is-wsl": "^1.1.0",
@@ -75,7 +76,7 @@
     "style-loader": "0.23.1",
     "terser-webpack-plugin": "1.2.3",
     "ts-pnp": "1.1.2",
-    "typescript": "3.5.3",
+    "typescript": "^3.4.5",
     "url-loader": "1.1.2",
     "webpack": "4.29.6",
     "webpack-dev-server": "3.2.1",
@@ -88,7 +89,8 @@
     "premake": "PUBLIC_URL=./ node scripts/build.js",
     "test": "node scripts/test.js",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build --remote upstream",
+    "deploy": "firebase deploy",
+    "serve": "npm run build && firebase serve",
     "lint": "eslint './src/**/*.{ts,tsx}'",
     "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'"
   },
@@ -162,5 +164,5 @@
       "react-app"
     ]
   },
-  "homepage": "http://playpuppy.github.io/playground"
+  "homepage": "."
 }
