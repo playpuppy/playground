@@ -8,7 +8,7 @@ import {
 } from 'monaco-editor';
 import { callKoinu } from './koinu';
 import { ErrorLog, PuppyVM } from '@playpuppy/puppy2d';
-import { messagefy } from '@playpuppy/puppy2d/dist/lang/code';
+import { messagefy } from '@playpuppy/puppy2d/dist/lang/message';
 import { add_log } from './firebase/firestore';
 
 export type CodeEditor = editor.IStandaloneCodeEditor;
@@ -109,10 +109,15 @@ languages.registerCompletionItemProvider('python', {
     ];
     const python = ['input', 'print', 'len', 'range', 'int', 'float', 'str'];
     const random = ['random'];
-    const matter = ['World', 'Circle', 'Rectangle', 'Polygon', 'Label'];
+    const matter = [
+      'World',
+      'Circle',
+      'Rectangle',
+      'Polygon',
+      'Label',
+      'setGravity',
+    ];
     const parameters = [
-      'width',
-      'height',
       'isStatic',
       'restitution',
       'fillStyle',
@@ -215,7 +220,8 @@ export const onChange = (
   puppy: PuppyVM | null,
   codeChangeTimer: NodeJS.Timer | null,
   setCodeChangeTimer: React.Dispatch<React.SetStateAction<NodeJS.Timer | null>>,
-  setEditorTheme: React.Dispatch<React.SetStateAction<string>>
+  setEditorTheme: React.Dispatch<React.SetStateAction<string>>,
+  saveSessionStorage: (source: string) => void
 ) => (source: string, _event: editor.IModelContentChangedEvent) => {
   if (codeEditor) {
     checkZenkaku(codeEditor, decos, setDecos);
@@ -227,6 +233,7 @@ export const onChange = (
   if (puppy) {
     setCodeChangeTimer(
       setTimeout(() => {
+        saveSessionStorage(source);
         try {
           if (puppy.load(source, false)) {
             setEditorTheme('vs');
@@ -290,7 +297,6 @@ export const ErrorLogs2Markers = (logs: ErrorLog[]): editor.IMarkerData[] =>
     endLineNumber: log.row! + 1,
     endColumn: log.col! + log.len!,
     code: log.key,
-    source: log.subject ? log.subject : '',
     message: messagefy(log),
   }));
 

@@ -12,9 +12,9 @@ import { QueryParams } from './index';
 import {
   Courses,
   CourseShape,
-  fetchTextFromGitHub,
-  fetchSampleFromGitHub,
-  fetchCoursesFromGitHub,
+  fetchText,
+  fetchSample,
+  fetchCourses,
 } from './logic/course';
 import { PuppyVM } from '@playpuppy/puppy2d';
 import { LineEvent, ActionEvent } from '@playpuppy/puppy2d/dist/events';
@@ -37,12 +37,12 @@ import {
 } from './logic/editor';
 import { submitCommand } from './logic/setting';
 import { AutoPlayer } from './logic/autoplay';
-import { signInByGoogle } from './logic/firebase/auth';
+import { signInByGoogle, signOut, getCurrentUser } from './logic/firebase/auth';
 
 type AppProps = { qs: QueryParams; hash: string };
 
 const App: React.FC<AppProps> = (props: AppProps) => {
-  const coursePath = props.qs.course ? props.qs.course : 'course/TronShow';
+  const coursePath = props.qs.course ? props.qs.course : 'PuppyCourse2';
   const page = props.hash !== '' ? parseInt(props.hash.substr(1)) : 0;
   const [courses, setCourses] = useState({} as Courses);
   const [isShowVersion, setIsShowVersion] = useState(false);
@@ -67,6 +67,16 @@ const App: React.FC<AppProps> = (props: AppProps) => {
     null as NodeJS.Timer | null
   );
   const [isShowLogin, setIsShowLogin] = useState(false);
+  const [userName, setUserName] = useState('ゲスト');
+
+  const saveSessionStorage = (source: string) => {
+    if (course.list.length !== 0) {
+      sessionStorage.setItem(
+        `${coursePath}${course.list[page].path}/sample.py`,
+        source
+      );
+    }
+  };
 
   const autoPlayFunc = () => {
     const page =
@@ -76,12 +86,6 @@ const App: React.FC<AppProps> = (props: AppProps) => {
     window.location.hash = `#${page === course.list.length - 1 ? 0 : page + 1}`;
   };
   const play = (puppy: PuppyVM | null) => (source: string) => () => {
-    if (course.list.length !== 0) {
-      sessionStorage.setItem(
-        `${coursePath}${course.list[page].path}/sample.py`,
-        source
-      );
-    }
     setConsoleValue([]);
     if (codeEditor) {
       codeEditor.setSelection({
@@ -98,8 +102,26 @@ const App: React.FC<AppProps> = (props: AppProps) => {
     }
   };
 
+  const signInWithSetName = (method: () => Promise<void>) => () => {
+    return method().then(() => {
+      const user = getCurrentUser();
+      if (user && user.displayName) {
+        setUserName(user.displayName);
+      } else {
+        setUserName('ゲスト');
+      }
+    });
+  };
+
+  const signOutAndSetName = () => {
+    setIsShowLogin(false);
+    return signOut().then(() => {
+      setUserName('ゲスト');
+    });
+  };
+
   useEffect(() => {
-    fetchCoursesFromGitHub(setCourses);
+    fetchCourses(setCourses);
     const puppyElement = document.getElementById('puppy-screen');
     if (puppyElement) {
       const puppy = new PuppyVM(puppyElement);
@@ -164,6 +186,7 @@ const App: React.FC<AppProps> = (props: AppProps) => {
       <Container className="container">
         <Header
           courses={courses}
+          userName={userName}
           setIsShowVersion={setIsShowVersion}
           setIsShowSetting={() => setIsShowSetting(true)}
           setIsShowLogin={() => setIsShowLogin(true)}
@@ -179,7 +202,10 @@ const App: React.FC<AppProps> = (props: AppProps) => {
         <Login
           show={isShowLogin}
           setShow={setIsShowLogin}
-          signInByGoogle={() => signInByGoogle(puppy, setIsShowLogin)}
+          signInByGoogle={signInWithSetName(() =>
+            signInByGoogle(puppy, setIsShowLogin)
+          )}
+          signOut={signOutAndSetName}
         />
         <Row id="main-row">
           <Col id="left-col" xs={6}>
@@ -190,8 +216,9 @@ const App: React.FC<AppProps> = (props: AppProps) => {
               content={courseContent}
               visible={isCourseVisible}
               play={play(puppy)}
-              fetchContent={fetchTextFromGitHub(setCourseContent)}
-              fetchSample={fetchSampleFromGitHub(setSource)}
+              fetchContent={fetchText(setCourseContent)}
+              fetchSample={fetchSample(setSource)}
+              setVisible={setIsCourseVisible}
             />
             <PuppyScreen
               isCourseVisible={isCourseVisible}
@@ -202,7 +229,10 @@ const App: React.FC<AppProps> = (props: AppProps) => {
               play={
                 isAutoPlay
                   ? () => autoPlayer.play(autoPlayFunc)
-                  : play(puppy)(source)
+                  : () => {
+                      setIsCourseVisible(false);
+                      return play(puppy)(source)();
+                    }
               }
               fullscreen={fullscreen(puppy)}
               setSize={resize(puppy)}
@@ -221,7 +251,8 @@ const App: React.FC<AppProps> = (props: AppProps) => {
                 puppy,
                 codeChangeTimer,
                 setCodeChangeTimer,
-                setEditorTheme
+                setEditorTheme,
+                saveSessionStorage
               )}
               editorDidMount={editorDidMount(setCodeEditor)}
               fontPlus={fontPlus(editorFontSize, setEditorFontSize)}
